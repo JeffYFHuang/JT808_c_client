@@ -48,7 +48,7 @@ pthread_mutex_t rx_lock;
 #pragma diag_error 223
 
 FILE *gps_fd;
-#define gps_demo
+//#define gps_demo
 #ifdef gps_demo
 #define GPSPATH "./test.gps"
 #else
@@ -1840,7 +1840,7 @@ static void main_thread_entry_jt808()
 	msglist_destroy( list_jt808_tx );
 }
 
-static void tx_thread_entry_jt808(int socket)
+void * tx_thread_entry_jt808(void * para)
 {
 	uint8_t				ret;
 	int						i = 0;
@@ -1888,7 +1888,7 @@ static void tx_thread_entry_jt808(int socket)
 	//msglist_destroy( list_jt808_tx );
 }
 
-static void rx_thread_entry_jt808()
+void * rx_thread_entry_jt808(void * para)
 {
 	uint8_t				ret;
 	int						i = 0;
@@ -1922,7 +1922,8 @@ int toBcd(uint8_t *bcd, long num) {
     //uint8_t *bcd = malloc(6*sizeof(uint8_t));
 
     uint8_t digit;
-    for (int i = digits; i > 0; i--) {
+    int i;
+    for (i = digits; i > 0; i--) {
       digit = (uint8_t) (num % 10);
       if (i % 2 == 0) {
         bcd[i / 2 - 1] = digit;
@@ -1935,7 +1936,7 @@ int toBcd(uint8_t *bcd, long num) {
     return bcd;
 }
 
-int gps_logging_thread_entry_jt808(void)
+void * gps_logging_thread_entry_jt808(void * para)
 {
 	int read_bytes, total_bytes = 0;
 	char *start, *end;
@@ -2105,7 +2106,7 @@ int gps_logging_thread_entry_jt808(void)
 	return 0;
 }
 
-int gps_send_thread_entry_jt808() {
+void * gps_send_thread_entry_jt808(void * para) {
 	while (1) {
 		if (gps_baseinfo.status != 0) {
 		   gps_jt808_tx(gps_baseinfo);

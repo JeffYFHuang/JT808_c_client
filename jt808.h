@@ -306,6 +306,7 @@ uint8_t gprs_rx( uint8_t linkno, uint8_t *pinfo, uint16_t length );
 
 uint8_t jt808_add_tx_data( uint8_t linkno, JT808_MSG_TYPE type, uint16_t id, uint8_t *pinfo, uint16_t len );
 static uint8_t auth_jt808_tx( void );
+void start_gps_send();
 
 typedef enum
 {

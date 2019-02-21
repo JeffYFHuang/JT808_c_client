@@ -64,11 +64,5 @@ typedef int rtError;
 const char* rtStrError(rtError e);
 
 // TODO where all is this used??
-inline rtError
-rtErrorFromErrno(int err)
-{
-  // RT_ASSERT(err <= 65535); // uint16_max
-  return err == 0 ? RT_OK : (err | (RT_ERROR_CLASS_SYSERROR << 16));
-}
 
 #endif
