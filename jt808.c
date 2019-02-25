@@ -32,9 +32,9 @@
 
 #define INDENT_SPACES "  "
 
-pthread_t tid[4];
-pthread_mutex_t tx_lock;
-pthread_mutex_t rx_lock;
+static pthread_t tid[4];
+static pthread_mutex_t tx_lock;
+static pthread_mutex_t rx_lock;
 
 #include "Err.h"
 #include "jt808.h"
@@ -44,17 +44,19 @@ pthread_mutex_t rx_lock;
 #include "jt808_param.h"
 #include "jt808_sms.h"
 #include "jt808_gps.h"
+#include "atcmd.h"
 
 #pragma diag_error 223
 
 FILE *gps_fd;
 //#define gps_demo
 #ifdef gps_demo
+//#define GPSPATH "/home/iasuser/workspace/c_workspace/jt808/Debug/test.gps"
 #define GPSPATH "./test.gps"
 #else
 #define GPSPATH "/dev/smd7"
 #endif
-int socketfd;
+static int socketfd;
 
 GPS_BASEINFO gps_baseinfo;
 
@@ -101,10 +103,10 @@ static uint16_t				tx_seq = 0;             /*�������*/
 static uint16_t				total_send_error = 0;   /*�ܵķ��ͳ����������ﵽһ���Ĵ���Ҫ����M66*/
 
 /*������Ϣ�б�*/
-MsgList* list_jt808_tx;
+static MsgList* list_jt808_tx;
 
 /*������Ϣ�б�*/
-MsgList				* list_jt808_rx;
+static MsgList				* list_jt808_rx;
 
 typedef enum
 {
@@ -1122,7 +1124,7 @@ static MsgListRet jt808_tx_proc( MsgListNode * node )
 #if 0
 			printer_data_hex(pnodedata->pmsg,pnodedata->msg_len);
 #endif
-			printf("send head id: %d\r\n", pnodedata->head_id);
+			printf("send head id: %02x\r\n", pnodedata->head_id);
 			ret = send( pnodedata->linkno, pnodedata->pmsg, pnodedata->msg_len, 0);
             //printf("send ret: %d\r\n", ret);
 			if( ret > 0 )             /*���ͳɹ��ȴ�����Ӧ����*/
@@ -1130,7 +1132,7 @@ static MsgListRet jt808_tx_proc( MsgListNode * node )
 				pnodedata->tick = current_timestamp();//0;//rt_tick_get( );
 				pnodedata->retry++;
 				//pnodedata->timeout	= pnodedata->retry * jt808_param.id_0x0002; //Seconds  * RT_TICK_PER_SECOND;
-				pnodedata->timeout	= 30 * 1000; //Seconds, RT_TICK_PER_SECOND*3;
+				pnodedata->timeout	= 1000; //Seconds, RT_TICK_PER_SECOND*3;
 				pnodedata->state	= WAIT_ACK;
 				if (pnodedata->head_id == 0x0200)
 					pnodedata->state	= ACK_OK;
@@ -1147,8 +1149,6 @@ static MsgListRet jt808_tx_proc( MsgListNode * node )
 				total_send_error++;
 				printf( "total_send_error=%d\r\n", total_send_error );
 			}
-		}//else
-		{
 		}
 
 		return MSGLIST_RET_OK;
@@ -1846,21 +1846,15 @@ void * tx_thread_entry_jt808(void * para)
 	int						i = 0;
 	uint8_t					buf[1024];
 
-	MsgListNode				* iter;
-	JT808_TX_MSG_NODEDATA	* pnodedata;
+	MsgListNode				* iter = NULL;
+	JT808_TX_MSG_NODEDATA	* pnodedata = NULL;
 
 	int						j = 0xaabbccdd;
 
 	memset(buf, 0, sizeof(buf));
-	printf( "\r\n1.id0=%08x\r\n", param_get_int( 0x0000 ) );
-
-	param_put_int( 0x000, j );
-	printf( "\r\nwrite j=%08x read=%08x\r\n", j, param_get_int( 0x0000 ) );
-
-	param_put( 0x000, 4, (uint8_t*)&j );
-	printf( "\r\nid0=%08x\r\n", param_get_int( 0x0000 ) );
 
 	//param_load( );
+	//printf("iter %p\r\n", iter);
 	while( 1 )
 	{
 		iter = list_jt808_tx->first;
@@ -1874,15 +1868,15 @@ void * tx_thread_entry_jt808(void * para)
 			   auth_jt808_tx();
 			}
 			pthread_mutex_lock(list_jt808_tx->lock);
-			printf("tx lock %p\r\n", list_jt808_tx->lock);
-			free(pnodedata->user_para);						/*ɾ���û�����*/
-			free( pnodedata->pmsg );                         /*ɾ���û�����*/
-			free( pnodedata );                               /*ɾ���ڵ�����*/
-			list_jt808_tx->first = iter->next;                  /*ָ����һ��*/
+			free( pnodedata->user_para);
+			free( pnodedata->pmsg );
+			free( pnodedata );
+			list_jt808_tx->first = iter->next;
 			free( iter );
 			pthread_mutex_unlock(list_jt808_tx->lock);
-			printf("tx unlock %p\r\n", list_jt808_tx->lock);
+			printf("tx unlock! %p\r\n", list_jt808_tx->lock);
 		}
+		sleep(1);
 	}
 
 	//msglist_destroy( list_jt808_tx );
@@ -1902,63 +1896,38 @@ void * rx_thread_entry_jt808(void * para)
 		if( ret > 0 )
 		{
 			jt808_rx_proc(buf, ret);
-			printf("jt808_rx_proc finish!");
 			memset(buf,0, sizeof(buf));
 		}
+		sleep(1);
 	}
 }
 
-int toBcd(uint8_t *bcd, long num) {
-    int digits = 0;
-
-    long quot = num;
-    while (quot != 0) {
-      quot /= 10;
-      digits++;
-    }
-
-    int len = digits % 2 == 0 ? digits / 2 : digits / 2 + 1;
-
-    //uint8_t *bcd = malloc(6*sizeof(uint8_t));
-
-    uint8_t digit;
-    int i;
-    for (i = digits; i > 0; i--) {
-      digit = (uint8_t) (num % 10);
-      if (i % 2 == 0) {
-        bcd[i / 2 - 1] = digit;
-      } else {
-        bcd[i / 2] |= digit << 4;
-      }
-      num /= 10;
-    }
-
-    return bcd;
-}
 
 void * gps_logging_thread_entry_jt808(void * para)
 {
-	int read_bytes, total_bytes = 0;
-	char *start, *end;
-	sigset_t block_mask;
+    int read_bytes, total_bytes = 0;
+    char *start, *end;
+    sigset_t block_mask;
     char line[MINMEA_MAX_LENGTH];
 
-	printf("open gps %d\r\n", gps_fd);
-	while ((gps_fd = fopen(GPSPATH, "r")) == NULL) {
-		printf("open gps fail! %d", gps_fd);
-		sleep(5);
-	}
+    printf("open gps %d\r\n", gps_fd);
+    while ((gps_fd = fopen(GPSPATH, "r")) == NULL) {
+    printf("open gps fail! %d", gps_fd);
+        sleep(5);
+    }
 
     while (1) {
-#ifdef gps_demo
+        sleep(0.5);
     	if (fgets(line, sizeof(line), gps_fd) == NULL) {
+#ifdef gps_demo
     		rewind(gps_fd);
     		continue;
-    	}
 #endif
-//        printf("%s", line);
+        }
+
         switch (minmea_sentence_id(line, false)) {
             case MINMEA_SENTENCE_RMC: {
+                printf("%s", line);
                 struct minmea_sentence_rmc frame;
                 if (minmea_parse_rmc(&frame, line)) {
 #if 0
@@ -1987,16 +1956,25 @@ void * gps_logging_thread_entry_jt808(void * para)
 
               	    ts = malloc(sizeof(struct timespec));
                     if (minmea_gettime(ts, &frame.date, &frame.time) == 0) {
+                        //printf("nmea time\r\n");
                     	info = localtime( &(ts->tv_sec) );
                     	strftime(buffer, 80, "%y%m%d%H%M%S", info);
                     } else {
+                        //printf("sys time\r\n");
                  	    time_t rawtime;
                  	    time( &rawtime );
                  	    info = localtime( &rawtime );
                  	    strftime(buffer,80,"%y%m%d%H%M%S", info);
                     }
                     free(ts);
-                    toBcd(gps_baseinfo.datetime, atol(buffer));
+                    //printf("datetime: %s\r\n", buffer);
+                    char * pEnd;
+                    toBcd(gps_baseinfo.datetime, strtoll(buffer, pEnd, 10));
+                    /*int i;
+                    for (i = 0; i < 6; i++) {
+                        printf("%02x", gps_baseinfo.datetime[i]);
+                    }
+                    printf("\r\n");*/
                 }
                 else {
                     printf(INDENT_SPACES "$xxRMC sentence is not parsed\n");
@@ -2091,7 +2069,7 @@ void * gps_logging_thread_entry_jt808(void * para)
             } break;
 #endif
             case MINMEA_INVALID: {
-                printf(INDENT_SPACES "$xxxxx sentence is not valid\n");
+                //printf(INDENT_SPACES "$xxxxx sentence is not valid\n");
             } break;
 
             default: {
@@ -2108,6 +2086,7 @@ void * gps_logging_thread_entry_jt808(void * para)
 
 void * gps_send_thread_entry_jt808(void * para) {
 	while (1) {
+		printf("send gps: %d\r\n", gps_baseinfo.status);
 		if (gps_baseinfo.status != 0) {
 		   gps_jt808_tx(gps_baseinfo);
 		   gps_baseinfo.status = 0;
@@ -2121,16 +2100,18 @@ void start_gps_logging() {
     int err = pthread_create(&(tid[2]), NULL, &gps_logging_thread_entry_jt808, NULL);
     if (err != 0)
         printf("\ncan't create gps logging thread :[%s]", strerror(err));
-    else
+    else {
         printf("\n Thread created gps logging thread successfully\n");
+    }
 }
 
 void start_gps_send() {
     int err = pthread_create(&(tid[3]), NULL, &gps_send_thread_entry_jt808, NULL);
     if (err != 0)
         printf("\ncan't create gps send thread :[%s]", strerror(err));
-    else
+    else {
         printf("\n Thread created gps send thread successfully\n");
+    }
 }
 
 void connectToServer(struct hostent *host, int port) {
@@ -2160,27 +2141,28 @@ void connectToServer(struct hostent *host, int port) {
     }
 
 	list_jt808_tx	= msglist_create( &tx_lock );
-	list_jt808_rx	= msglist_create( &rx_lock );
+	//list_jt808_rx	= msglist_create( &rx_lock );
 
     register_jt808_tx(); //start register
 
     int err = pthread_create(&(tid[0]), NULL, &tx_thread_entry_jt808, NULL);
     if (err != 0)
         printf("\ncan't create thread :[%s]", strerror(err));
-    else
-        printf("\n Thread created successfully\n");
+    else {
+        printf("\n Thread created tx successfully\n");
+    }
 
     err = pthread_create(&(tid[1]), NULL, &rx_thread_entry_jt808, NULL);
     if (err != 0)
         printf("\ncan't create thread :[%s]", strerror(err));
-    else
-        printf("\n Thread created successfully\n");
+    else {
+        printf("\n Thread created rx successfully\n");
+    }
+
 }
 
-int main(int argc, char *argv[])
-{
-	struct hostent *host;
-
+int init_param () {
+    printf("%s\r\n", __func__);
 	if (pthread_mutex_init(&tx_lock, NULL) != 0)
     {
         printf("\n mutex init failed\n");
@@ -2193,7 +2175,21 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-	printf("lock %p\r\n", &tx_lock);
+//	printf("lock %p\r\n", &tx_lock);
+#if QUEC_AT_ENABLE
+	getImei(term_param.mobile);
+	int i;
+	for (i = 0; i < 6; i++) {
+	     printf("%02x", term_param.mobile[i]);
+	}
+	printf("\r\n");
+#endif
+}
+int main(int argc, char *argv[])
+{
+	struct hostent *host;
+
+	init_param();
 
     if(argc!=3)
     {
@@ -2207,10 +2203,15 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    connectToServer(host, atoi(argv[2]));;
     start_gps_logging();
-    connectToServer(host, atoi(argv[2]));
 
-	while(1){}
+    void* tret;
+    pthread_join(tid[0],  (int)tret);
+    pthread_join(tid[1],  (int)tret);
+    pthread_join(tid[2],  (int)tret);
+    pthread_join(tid[3],  (int)tret);
+	//while(1){}
    /* printf("Please input char:\n");
 
     fgets(buffer,1024,stdin);

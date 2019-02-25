@@ -34,6 +34,7 @@ void msglist_node_destroy(MsgListNode* node)
 
 MsgList* msglist_create(pthread_mutex_t *lock)
 {
+	pthread_mutex_lock(lock);
 	MsgList* thiz = malloc(sizeof(MsgList));
 
 	if(thiz != RT_NULL)
@@ -41,7 +42,7 @@ MsgList* msglist_create(pthread_mutex_t *lock)
 		thiz->lock = lock;
 		thiz->first = RT_NULL;
 	}
-
+	pthread_mutex_unlock(lock);
 	return thiz;
 }
 

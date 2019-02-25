@@ -263,7 +263,7 @@ bool minmea_scan(const char *sentence, const char *format, ...)
 
                 if (field && minmea_isfield(*field)) {
                     // Always six digits.
-                	int f;
+                    int f;
                     for (f=0; f<6; f++)
                         if (!isdigit((unsigned char) field[f]))
                             goto parse_error;
@@ -288,7 +288,7 @@ bool minmea_scan(const char *sentence, const char *format, ...)
 
                 if (field && minmea_isfield(*field)) {
                     // Minimum required: integer time.
-                	int f;
+                    int f;
                     for (f=0; f<6; f++)
                         if (!isdigit((unsigned char) field[f]))
                             goto parse_error;
