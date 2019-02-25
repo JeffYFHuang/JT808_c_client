@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "atcmd.h"
-#if AT_ENABLE
+#if QUEC_AT_ENABLE
 
 static int smd_fd = -1;
 

@@ -1,7 +1,7 @@
 #include <stdint.h>
 #define QUEC_AT_ENABLE 0
 
-#if AT_ENABLE
+#if QUEC_AT_ENABLE
 
 #include "ql_oe.h"
 

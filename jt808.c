@@ -1902,6 +1902,35 @@ void * rx_thread_entry_jt808(void * para)
 	}
 }
 
+long long getTimeDiff () {
+time_t abs_ts,loc_ts,gmt_ts;
+struct tm loc_time_info,gmt_time_info;
+
+/*Absolute time stamp.*/
+time(&abs_ts);
+
+/*Now get once the local time for this time stamp,
+**and once the GMT (UTC without summer time) time stamp.*/
+localtime_r(&abs_ts,&loc_time_info);
+gmtime_r(&abs_ts,&gmt_time_info);
+
+/*Convert them back.*/
+loc_ts=mktime(&loc_time_info);
+gmt_ts=mktime(&gmt_time_info);
+
+/*Unfortunately, GMT still has summer time. Get rid of it:*/
+if(gmt_time_info.tm_isdst==1)
+        {gmt_ts-=3600;}
+
+printf("Local timestamp: %lu\n"
+        "UTC timestamp: %lu\n"
+        "Difference in hours: %lu\n\n",
+        loc_ts,
+        gmt_ts,
+        (loc_ts-gmt_ts)/3600);
+
+return 0;
+}
 
 void * gps_logging_thread_entry_jt808(void * para)
 {
@@ -1927,7 +1956,7 @@ void * gps_logging_thread_entry_jt808(void * para)
 
         switch (minmea_sentence_id(line, false)) {
             case MINMEA_SENTENCE_RMC: {
-                printf("%s", line);
+                //printf("%s", line);
                 struct minmea_sentence_rmc frame;
                 if (minmea_parse_rmc(&frame, line)) {
 #if 0
@@ -1955,9 +1984,10 @@ void * gps_logging_thread_entry_jt808(void * para)
               	    char buffer[80];
 
               	    ts = malloc(sizeof(struct timespec));
+                    //getTimeDiff();
                     if (minmea_gettime(ts, &frame.date, &frame.time) == 0) {
                         //printf("nmea time\r\n");
-                    	info = localtime( &(ts->tv_sec) );
+                        info = localtime(&ts->tv_sec);
                     	strftime(buffer, 80, "%y%m%d%H%M%S", info);
                     } else {
                         //printf("sys time\r\n");
