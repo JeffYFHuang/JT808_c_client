@@ -12,6 +12,9 @@ typedef struct _gps_baseinfo
 	uint16_t speed;
 	uint16_t direction;
 	uint8_t datetime[6];
+	uint32_t odb_odometer;
+	uint16_t fuellevel;
+	uint16_t odb_speed;
 } GPS_BASEINFO;
 
 

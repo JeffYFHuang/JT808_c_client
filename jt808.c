@@ -1,16 +1,3 @@
-/************************************************************
- * Copyright (C), 2008-2012,
- * FileName:		// �ļ���
- * Author:			// ����
- * Date:			// ����
- * Description:		// ģ������
- * Version:			// �汾��Ϣ
- * Function List:	// ��Ҫ�������书��
- *     1. -------
- * History:			// ��ʷ�޸ļ�¼
- *     <author>  <time>   <version >   <desc>
- *     David    96/10/12     1.0     build this moudle
- ***********************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -49,7 +36,8 @@ static pthread_mutex_t rx_lock;
 #pragma diag_error 223
 
 FILE *gps_fd;
-//#define gps_demo
+#define DUMMY_SIMULATION 1
+#define gps_demo
 #ifdef gps_demo
 //#define GPSPATH "/home/iasuser/workspace/c_workspace/jt808/Debug/test.gps"
 #define GPSPATH "./test.gps"
@@ -277,23 +265,10 @@ static uint16_t jt808_pack_array( uint8_t *buf, uint8_t *fcs, uint8_t *src, uint
 	return count;
 }
 
-/*
-   jt808�ն˷�����Ϣ
-   ���������Ϣע�ᵽ������Ϣ�Ĵ����߳���
-   ��Ҫ������ϢID,����Ϣ�壬��jt808_send�߳����
-    ��Ϣ�����
-    ���ͺ��ط�����
-    ��ˮ��
-    �ѷ���Ϣ�Ļ���free
-   ���ݽ����ĸ�ʽ
-   <msgid 2bytes><msg_len 2bytes><msgbody nbytes>
-
- */
 static void jt808_send( void * parameter )
 {
 }
 
-/*���ͺ��յ�Ӧ����*/
 void jt808_tx_response( JT808_TX_MSG_NODEDATA * nodedata, uint8_t linkno, uint8_t *pmsg )
 {
 	uint8_t		* msg = pmsg + 12;
@@ -352,17 +327,11 @@ void jt808_tx_response( JT808_TX_MSG_NODEDATA * nodedata, uint8_t linkno, uint8_
 	}
 }
 
-/*
-   ��Ϣ���ͳ�ʱ
- */
 static uint8_t jt808_tx_timeout( JT808_TX_MSG_NODEDATA * nodedata )
 {
 	printf( "tx timeout\r\n" );
 }
 
-/*
-   ���һ����Ϣ�������б���
- */
 uint8_t jt808_add_tx_data( uint8_t linkno, JT808_MSG_TYPE type, uint16_t id, uint8_t *pinfo, uint16_t len )
 {
 	uint8_t					* pdata;
@@ -397,9 +366,6 @@ uint8_t jt808_add_tx_data( uint8_t linkno, JT808_MSG_TYPE type, uint16_t id, uin
     return RT_OK;
 }
 
-/*
-   �ն�ͨ��Ӧ��
- */
 static uint8_t jt808_tx_0x0001( uint8_t linkno, uint16_t seq, uint16_t id, uint8_t res )
 {
 	uint8_t					* pdata;
@@ -435,9 +401,6 @@ static uint8_t jt808_tx_0x0001( uint8_t linkno, uint16_t seq, uint16_t id, uint8
 	return RT_OK;
 }
 
-/*
-ƽ̨ͨ��Ӧ��,�յ���Ϣ��ֹͣ����
-*/
 static int handle_rx_0x8001( uint8_t linkno, uint8_t *pmsg )
 {
 	MsgListNode				* iter;
@@ -446,12 +409,11 @@ static int handle_rx_0x8001( uint8_t linkno, uint8_t *pmsg )
 	uint16_t				id;
 	uint16_t				seq;
 	uint8_t					res;
-/*������Ϣͷ12byte*/
+
 	seq = ( *( pmsg + 12 ) << 8 ) | *( pmsg + 13 );
 	id	= ( *( pmsg + 14 ) << 8 ) | *( pmsg + 15 );
 	res = *( pmsg + 16 );
 
-	/*��������*/
 	iter		= list_jt808_tx->first;
 	iterdata	= (JT808_TX_MSG_NODEDATA*)iter->data;
 	if(iterdata->multipacket==0)
@@ -474,7 +436,6 @@ int handle_8001(void)
 	MsgListNode				* iter;
 	JT808_TX_MSG_NODEDATA	* iterdata;
 
-	/*��������*/
 	iter		= list_jt808_tx->first;
 	iterdata	= (JT808_TX_MSG_NODEDATA*)iter->data;
 	if(iterdata->multipacket)
@@ -486,8 +447,6 @@ int handle_8001(void)
 
 FINSH_FUNCTION_EXPORT( handle_8001, handle_8001 );
 
-
-/*�����ְ�����*/
 static int handle_rx_0x8003( uint8_t linkno, uint8_t *pmsg )
 {
 }
@@ -522,7 +481,6 @@ static int handle_rx_0x8100( uint8_t linkno, uint8_t *pmsg )
 	return 1;
 }
 
-/*�����ն˲���*/
 static int handle_rx_0x8103( uint8_t linkno, uint8_t *pmsg )
 {
 	uint8_t		* p;
@@ -534,7 +492,7 @@ static int handle_rx_0x8103( uint8_t linkno, uint8_t *pmsg )
 
 	uint16_t	seq, id;
 
-	if( *( pmsg + 2 ) >= 0x20 ) /*����Ƕ�������ò���*/
+	if( *( pmsg + 2 ) >= 0x20 )
 	{
 		printf( "\r\n>%s multi packet no support!", __func__ );
 		return 1;
@@ -546,7 +504,6 @@ static int handle_rx_0x8103( uint8_t linkno, uint8_t *pmsg )
 	msg_len = ( ( pmsg[2] << 8 ) | pmsg[3] ) & 0x3FF - 1;
 	p		= pmsg + 13;
 
-	/*ʹ�����ݳ���,�ж������Ƿ������û��ʹ�ò�������*/
 	while( count < msg_len )
 	{
 		param_id	= ( ( *p++ ) << 24 ) | ( ( *p++ ) << 16 ) | ( ( *p++ ) << 8 ) | ( *p++ );
@@ -559,18 +516,16 @@ static int handle_rx_0x8103( uint8_t linkno, uint8_t *pmsg )
 			break;
 		}
 	}
-	/*����ͨ��Ӧ��*/
+
 	jt808_tx_0x0001( linkno, seq, id, res );
 	return 1;
 }
 
-/*��ѯȫ���ն˲������п��ܻᳬ����������ֽ�*/
 static int handle_rx_0x8104( uint8_t linkno, uint8_t *pmsg )
 {
 	return 1;
 }
 
-/*�ն˿���*/
 static int handle_rx_0x8105( uint8_t linkno, uint8_t *pmsg )
 {
 	uint8_t cmd;
@@ -597,7 +552,6 @@ static int handle_rx_0x8105( uint8_t linkno, uint8_t *pmsg )
 	return 1;
 }
 
-/*��ѯָ���ն˲���,����Ӧ��0x0104*/
 static int handle_rx_0x8106( uint8_t linkno, uint8_t *pmsg )
 {
 	int			i;
@@ -655,7 +609,6 @@ static int handle_rx_0x8106( uint8_t linkno, uint8_t *pmsg )
 	return 1;
 }
 
-/*��ѯ�ն�����,Ӧ�� 0x0107*/
 static int handle_rx_0x8107( uint8_t linkno, uint8_t *pmsg )
 {
 	uint8_t		buf[100];
@@ -782,13 +735,11 @@ static int handle_rx_0x8607( uint8_t linkno, uint8_t *pmsg )
 	return 1;
 }
 
-/*��ʻ��¼�����ݲɼ�*/
 static int handle_rx_0x8700( uint8_t linkno, uint8_t *pmsg )
 {
 	return 1;
 }
 
-/*��ʻ��¼�ǲ����´�*/
 static int handle_rx_0x8701( uint8_t linkno, uint8_t *pmsg )
 {
 	return 1;
@@ -800,7 +751,7 @@ static int handle_rx_0x8800( uint8_t linkno, uint8_t *pmsg )
 	MsgListNode				* iter;
 	JT808_TX_MSG_NODEDATA	* iterdata;
 
-	uint16_t				body_len; /*��Ϣ�峤��*/
+	uint16_t				body_len;
 	uint16_t				ack_seq;
 	uint8_t					res;
 	uint8_t					* msg;
@@ -813,7 +764,7 @@ static int handle_rx_0x8800( uint8_t linkno, uint8_t *pmsg )
 
 	iter		= list_jt808_tx->first;
 	iterdata	= iter->data;
-	if(( iterdata->head_id == 0x0801 )&&(iterdata->multipacket))	///�ж��Ƿ���ûص�����
+	if(( iterdata->head_id == 0x0801 )&&(iterdata->multipacket))
 	{
 		if(iterdata->cb_tx_response!=NULL)
 			{
@@ -831,7 +782,7 @@ static int handle_8800( uint32_t media_id ,char* pmsg)
 	JT808_TX_MSG_NODEDATA	* iterdata;
 	uint8_t 				tempbuf[128];
 
-	uint16_t				body_len; /*��Ϣ�峤��*/
+	uint16_t				body_len;
 	uint16_t				ack_seq;
 	uint8_t					res;
 	uint8_t					* msg;
@@ -860,7 +811,7 @@ static int handle_8800( uint32_t media_id ,char* pmsg)
 		}
 	iter		= list_jt808_tx->first;
 	iterdata	= iter->data;
-	if(( iterdata->head_id == 0x0801 )&&(iterdata->multipacket))	///�ж��Ƿ���ûص�����
+	if(( iterdata->head_id == 0x0801 )&&(iterdata->multipacket))
 	{
 		if(iterdata->cb_tx_response!=NULL)
 			{
@@ -870,7 +821,7 @@ static int handle_8800( uint32_t media_id ,char* pmsg)
 	}
 	return 1;
 }
-/*����ͷ������������*/
+
 static int handle_rx_0x8801( uint8_t linkno, uint8_t *pmsg )
 {
 	return 1;
@@ -932,50 +883,43 @@ static int handle_rx_default( uint8_t linkno, uint8_t *pmsg )
 
 HANDLE_JT808_RX_MSG handle_rx_msg[] =
 {
-	DECL_JT808_RX_HANDLE( 0x8001 ), //	ͨ��Ӧ��
-	DECL_JT808_RX_HANDLE( 0x8003 ), //	�����ְ�����
-	DECL_JT808_RX_HANDLE( 0x8100 ), //  ������Ķ��ն�ע����Ϣ��Ӧ��
-	DECL_JT808_RX_HANDLE( 0x8103 ), //	�����ն˲���
-	DECL_JT808_RX_HANDLE( 0x8104 ), //	��ѯ�ն˲���
-	DECL_JT808_RX_HANDLE( 0x8105 ), // �ն˿���
-	DECL_JT808_RX_HANDLE( 0x8106 ), // ��ѯָ���ն˲���
-	DECL_JT808_RX_HANDLE( 0x8201 ), // λ����Ϣ��ѯ    λ����Ϣ��ѯ��Ϣ��Ϊ��
-	DECL_JT808_RX_HANDLE( 0x8202 ), // ��ʱλ�ø��ٿ���
-	DECL_JT808_RX_HANDLE( 0x8300 ), //	�ı���Ϣ�·�
-	DECL_JT808_RX_HANDLE( 0x8301 ), //	�¼�����
-	DECL_JT808_RX_HANDLE( 0x8302 ), // �����·�
-	DECL_JT808_RX_HANDLE( 0x8303 ), //	��Ϣ�㲥�˵�����
-	DECL_JT808_RX_HANDLE( 0x8304 ), //	��Ϣ����
-	DECL_JT808_RX_HANDLE( 0x8400 ), //	�绰�ز�
-	DECL_JT808_RX_HANDLE( 0x8401 ), //	���õ绰��
-	DECL_JT808_RX_HANDLE( 0x8500 ), //	��������
-	DECL_JT808_RX_HANDLE( 0x8600 ), //	����Բ������
-	DECL_JT808_RX_HANDLE( 0x8601 ), //	ɾ��Բ������
-	DECL_JT808_RX_HANDLE( 0x8602 ), //	���þ�������
-	DECL_JT808_RX_HANDLE( 0x8603 ), //	ɾ����������
-	DECL_JT808_RX_HANDLE( 0x8604 ), //	���������
-	DECL_JT808_RX_HANDLE( 0x8605 ), //	ɾ���������
-	DECL_JT808_RX_HANDLE( 0x8606 ), //	����·��
-	DECL_JT808_RX_HANDLE( 0x8607 ), //	ɾ��·��
-	DECL_JT808_RX_HANDLE( 0x8700 ), //	�г���¼�����ݲɼ�����
-	DECL_JT808_RX_HANDLE( 0x8701 ), //	��ʻ��¼�ǲ����´�����
-	DECL_JT808_RX_HANDLE( 0x8800 ), //	��ý�������ϴ�Ӧ��
-	DECL_JT808_RX_HANDLE( 0x8801 ), //	����ͷ��������
-	DECL_JT808_RX_HANDLE( 0x8802 ), //	�洢��ý�����ݼ���
-	DECL_JT808_RX_HANDLE( 0x8803 ), //	�洢��ý�������ϴ�����
-	DECL_JT808_RX_HANDLE( 0x8804 ), //	¼����ʼ����
-	DECL_JT808_RX_HANDLE( 0x8805 ), //	�����洢��ý�����ݼ����ϴ����� ---- ����Э��Ҫ��
-	DECL_JT808_RX_HANDLE( 0x8900 ), //	��������͸��
-	DECL_JT808_RX_HANDLE( 0x8A00 ), //	ƽ̨RSA��Կ
+	DECL_JT808_RX_HANDLE( 0x8001 ),
+	DECL_JT808_RX_HANDLE( 0x8003 ),
+	DECL_JT808_RX_HANDLE( 0x8100 ),
+	DECL_JT808_RX_HANDLE( 0x8103 ),
+	DECL_JT808_RX_HANDLE( 0x8104 ),
+	DECL_JT808_RX_HANDLE( 0x8105 ),
+	DECL_JT808_RX_HANDLE( 0x8106 ),
+	DECL_JT808_RX_HANDLE( 0x8201 ),
+	DECL_JT808_RX_HANDLE( 0x8202 ),
+	DECL_JT808_RX_HANDLE( 0x8300 ),
+	DECL_JT808_RX_HANDLE( 0x8301 ),
+	DECL_JT808_RX_HANDLE( 0x8302 ),
+	DECL_JT808_RX_HANDLE( 0x8303 ),
+	DECL_JT808_RX_HANDLE( 0x8304 ),
+	DECL_JT808_RX_HANDLE( 0x8400 ),
+	DECL_JT808_RX_HANDLE( 0x8401 ),
+	DECL_JT808_RX_HANDLE( 0x8500 ),
+	DECL_JT808_RX_HANDLE( 0x8600 ),
+	DECL_JT808_RX_HANDLE( 0x8601 ),
+	DECL_JT808_RX_HANDLE( 0x8602 ),
+	DECL_JT808_RX_HANDLE( 0x8603 ),
+	DECL_JT808_RX_HANDLE( 0x8604 ),
+	DECL_JT808_RX_HANDLE( 0x8605 ),
+	DECL_JT808_RX_HANDLE( 0x8606 ),
+	DECL_JT808_RX_HANDLE( 0x8607 ),
+	DECL_JT808_RX_HANDLE( 0x8700 ),
+	DECL_JT808_RX_HANDLE( 0x8701 ),
+	DECL_JT808_RX_HANDLE( 0x8800 ),
+	DECL_JT808_RX_HANDLE( 0x8801 ),
+	DECL_JT808_RX_HANDLE( 0x8802 ),
+	DECL_JT808_RX_HANDLE( 0x8803 ),
+	DECL_JT808_RX_HANDLE( 0x8804 ),
+	DECL_JT808_RX_HANDLE( 0x8805 ),
+	DECL_JT808_RX_HANDLE( 0x8900 ),
+	DECL_JT808_RX_HANDLE( 0x8A00 ),
 };
 
-
-/*
-   ���մ���
-   ����jt808��ʽ������
-   <linkno><����2byte><��ʶ0x7e><��Ϣͷ><��Ϣ��><У����><��ʶ0x7e>
-
- */
 uint16_t jt808_rx_proc( uint8_t * pinfo, uint16_t len)
 {
 	uint8_t		* psrc;
@@ -1042,13 +986,6 @@ uint16_t jt808_rx_proc( uint8_t * pinfo, uint16_t len)
 	return RT_OK;
 }
 
-/*
-   ����ÿ��Ҫ������Ϣ��״̬
-   ���������д�����?
-
-   2013.06.08���Ӷ�����ʹ���
- */
-
 long long current_timestamp() {
     struct timeval te;
     gettimeofday(&te, NULL); // get current time
@@ -1074,13 +1011,13 @@ static MsgListRet jt808_tx_proc( MsgListNode * node )
 
     //printf("pnode data state: %d\r\d", pnodedata->state);
 
-	if( pnodedata->state == GET_DATA)                   /*��ȡ�������ʱ������*/
+	if( pnodedata->state == GET_DATA)
     {
-		if( pnodedata->multipacket == 0 )   /*�ж��Ƿ�Ϊ�������,Ϊ0��ʾΪ��������*/
+		if( pnodedata->multipacket == 0 )
 		{
 			pnodedata->state = IDLE;
 		}
-		else								/*�������*/
+		else
 		{
 			ret_getdata=pnodedata->get_data(pnodedata);
 			if(ret_getdata==0xFFFF)
@@ -1099,16 +1036,14 @@ static MsgListRet jt808_tx_proc( MsgListNode * node )
 		}
 	}
 
-	if( pnodedata->state == IDLE )                      /*���У�������Ϣ��ʱ��û������*/
+	if( pnodedata->state == IDLE )
 	{
-		if( pnodedata->retry >= jt808_param.id_0x0003 ) /*����������ش�����*/                                                                     /*�Ѿ��ﵽ���Դ���*/
+		if( pnodedata->retry >= jt808_param.id_0x0003 )                                                                     /*�Ѿ��ﵽ���Դ���*/
 		{
-			/*��ʾ����ʧ��*/
 			pnodedata->cb_tx_timeout( pnodedata );      /*���÷���ʧ�ܴ�����*/
 			return MSGLIST_RET_DELETE_NODE;
 		}
 		#if 0
-		/*Ҫ�ж��ǲ��ǳ���GSM_TCPIP״̬,��ǰsocket�Ƿ����*/
 		if( gsmstate( GSM_STATE_GET ) != GSM_TCPIP )
 		{
 			return MSGLIST_RET_OK;
@@ -1119,7 +1054,7 @@ static MsgListRet jt808_tx_proc( MsgListNode * node )
 		}
 		#endif
 		
-		if( pnodedata->multipacket == 0 )   /*�ж��Ƿ�Ϊ�������*/
+		if( pnodedata->multipacket == 0 )
 		{
 #if 0
 			printer_data_hex(pnodedata->pmsg,pnodedata->msg_len);
@@ -1127,7 +1062,7 @@ static MsgListRet jt808_tx_proc( MsgListNode * node )
 			printf("send head id: %02x\r\n", pnodedata->head_id);
 			ret = send( pnodedata->linkno, pnodedata->pmsg, pnodedata->msg_len, 0);
             //printf("send ret: %d\r\n", ret);
-			if( ret > 0 )             /*���ͳɹ��ȴ�����Ӧ����*/
+			if( ret > 0 )
 			{
 				pnodedata->tick = current_timestamp();//0;//rt_tick_get( );
 				pnodedata->retry++;
@@ -1136,16 +1071,16 @@ static MsgListRet jt808_tx_proc( MsgListNode * node )
 				pnodedata->state	= WAIT_ACK;
 				if (pnodedata->head_id == 0x0200)
 					pnodedata->state	= ACK_OK;
-				#ifdef NO_COMMON_ACK			///���û��ͨ��Ӧ
+				#ifdef NO_COMMON_ACK
 				if( pnodedata->multipacket )
 					{
 					pnodedata->state	= GET_DATA;
 					}
 				#endif
 				printf( "send retry=%d,timeout=%d\r\n", pnodedata->retry, pnodedata->timeout );
-			}else /*��������û�еȵ�ģ�鷵�ص�OK�������ط������ǵ�һ��ʱ���ٷ�*/
+			}else
 			{
-				pnodedata->retry++; /*��λ�ٴη���*/
+				pnodedata->retry++;
 				total_send_error++;
 				printf( "total_send_error=%d\r\n", total_send_error );
 			}
@@ -1154,7 +1089,7 @@ static MsgListRet jt808_tx_proc( MsgListNode * node )
 		return MSGLIST_RET_OK;
 	}
 
-	if( pnodedata->state == WAIT_ACK ) /*�������Ӧ���Ƿ�ʱ*/
+	if( pnodedata->state == WAIT_ACK )
 	{
 #if 1
 		if( (current_timestamp() - pnodedata->tick) > pnodedata->timeout )
@@ -1173,21 +1108,6 @@ static MsgListRet jt808_tx_proc( MsgListNode * node )
 	return MSGLIST_RET_OK;
 }
 
-/*jt808��socket����
-
-   ά����·�����в�ͬ��ԭ��
-   �ϱ�״̬��ά��
-   1.��δ����
-   2.�������ӣ�DNS,��ʱ��Ӧ��
-   3.��ֹ�ϱ����ر�ģ�������
-   4.��ǰ���ڽ��п��и��£���ý���ϱ��Ȳ���Ҫ��ϵĹ���
-
- */
-
-
-/*
-   ����ص���Ҫ��M66����·�ض�ʱ��֪ͨ��socket����һ���������߳�
- */
 void cb_socket_state( uint8_t linkno, T_SOCKET_STATE new_state )
 {
 	if( linkno == 1 )
@@ -1201,35 +1121,32 @@ void cb_socket_state( uint8_t linkno, T_SOCKET_STATE new_state )
 	}
 }
 
-/*808���Ӵ���*/
 static void jt808_socket_proc( void )
 {
 #if 0
 	T_GSM_STATE state;
 
-/*����Ƿ�����gsm����*/
 	if( connect_state.disable_connect )
 	{
 		return;
 	}
 
-/*���GSM״̬*/
 	state = gsmstate( GSM_STATE_GET );
 	if( state == GSM_IDLE )
 	{
-		gsmstate( GSM_POWERON );                /*��������*/
+		gsmstate( GSM_POWERON );
 		return;
 	}
-/*���Ƶ���*/
-	if( state == GSM_AT )                       /*����Ҫ�ж����Ǹ�apn user psw ����*/
+
+	if( state == GSM_AT )
 	{
-		if( connect_state.server_index % 2 )    /*�ñ��÷�����*/
+		if( connect_state.server_index % 2 )
 		{
 			ctl_gprs( jt808_param.id_0x0014, \
 			          jt808_param.id_0x0015, \
 			          jt808_param.id_0x0016, \
 			          1 );
-		}else /*����������*/
+		}else
 		{
 			ctl_gprs( jt808_param.id_0x0010, \
 			          jt808_param.id_0x0011, \
@@ -1238,15 +1155,15 @@ static void jt808_socket_proc( void )
 		}
 		return;
 	}
-/*���ƽ�������*/
-	if( state == GSM_TCPIP )                        /*�Ѿ�������*/
+
+	if( state == GSM_TCPIP )
 	{
 		if( connect_state.server_state == CONNECT_IDLE )
 		{
-			if( connect_state.server_index % 2 )    /*�����÷�����*/
+			if( connect_state.server_index % 2 )
 			{
 				ctl_socket( 1, 't', jt808_param.id_0x0017, jt808_param.id_0x0018, 1 );
-			}else /*����������*/
+			}else
 			{
 				ctl_socket( 1, 't', jt808_param.id_0x0013, jt808_param.id_0x0018, 1 );
 			}
@@ -1254,32 +1171,29 @@ static void jt808_socket_proc( void )
 			return;
 		}
 
-		if( connect_state.server_state == CONNECT_PEER ) /*�������ӵ�������*/
+		if( connect_state.server_state == CONNECT_PEER )
 		{
 			if( socketstate( SOCKET_STATE ) == SOCKET_READY )
 			{
 				connect_state.server_state = CONNECTED;
-			}else /*û�����ӳɹ�,�л�������*/
+			}else
 			{
 				connect_state.server_index++;
 				connect_state.server_state = CONNECT_IDLE;
 			}
 		}
-
-		/*808������û�����ӳɹ����Ͳ���IC��������*/
+/
 		if( connect_state.server_state != CONNECTED )
 		{
 			return;
 		}
 
-		/*����IC��������*/
-
-		if( connect_state.auth_state == CONNECT_IDLE )  /*û������*/
+		if( connect_state.auth_state == CONNECT_IDLE )
 		{
-			if( connect_state.auth_index % 2 )          /*�����÷�����*/
+			if( connect_state.auth_index % 2 )
 			{
 				ctl_socket( 2, 't', jt808_param.id_0x001A, jt808_param.id_0x001B, 1 );
-			}else /*����������*/
+			}else
 			{
 				ctl_socket( 2, 't', jt808_param.id_0x001D, jt808_param.id_0x001B, 1 );
 			}
@@ -1287,12 +1201,12 @@ static void jt808_socket_proc( void )
 			return;
 		}
 
-		if( connect_state.auth_state == CONNECT_PEER ) /*�������ӵ�������*/
+		if( connect_state.auth_state == CONNECT_PEER )
 		{
 			if( socketstate( 0 ) == SOCKET_READY )
 			{
 				connect_state.auth_state = CONNECTED;
-			}else /*û�����ӳɹ�,�л�������*/
+			}else
 			{
 				//connect_state.auth_index++;
 				//connect_state.auth_state=CONNECT_IDLE;
@@ -1305,13 +1219,6 @@ static void jt808_socket_proc( void )
 	}
 }
 
-/*
-   tts���������Ĵ���
-
-   ��ͨ��
-   %TTS: 0 �ж�tts״̬(���ɲ�����ÿ�ζ������)
-   ����AT%TTS? ��ѯ״̬
- */
 void jt808_tts_proc( void )
 {
 	uint8_t	ret;
@@ -1322,7 +1229,7 @@ void jt808_tts_proc( void )
 
 	char		buf[20];
 	char		tbl[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
-/*gsm�ڴ�����������*/
+
 	oldstate = gsmstate( GSM_STATE_GET );
 	if( oldstate != GSM_TCPIP )
 	{
@@ -1332,7 +1239,6 @@ void jt808_tts_proc( void )
 		}
 	}
 
-/*�Ƿ�����ϢҪ����*/
 	ret = rt_mb_recv( &mb_tts, (uint32_t*)&pinfo, 0 );
 	if( ret != RT_EOK )
 	{
@@ -1341,7 +1247,7 @@ void jt808_tts_proc( void )
 
 	gsmstate( GSM_AT_SEND );
 
-	GPIO_ResetBits( GPIOD, GPIO_Pin_9 ); /*������*/
+	GPIO_ResetBits( GPIOD, GPIO_Pin_9 );
 
 	sprintf( buf, "AT%%TTS=2,3,5,\"" );
 
@@ -1365,17 +1271,14 @@ void jt808_tts_proc( void )
 	buf[3]	= 0;
 	rt_device_write( dev_gsm, 0, buf, 3 );
 	printf( "%s", buf );
-/*���жϣ���gsmrx_cb�д���*/
+
 	free( pinfo );
 	ret = gsm_send( "", NULL, "%TTS: 0", RESP_TYPE_STR, RT_TICK_PER_SECOND * 35, 1 );
-	GPIO_SetBits( GPIOD, GPIO_Pin_9 ); /*�ع���*/
+	GPIO_SetBits( GPIOD, GPIO_Pin_9 );
 	gsmstate( oldstate );
 #endif
 }
 
-/*
-   at������յ�OK��ʱ�˳�
- */
 void jt808_at_tx_proc( void )
 {
 #if 0
@@ -1385,7 +1288,6 @@ void jt808_at_tx_proc( void )
     uint8_t         c;
     T_GSM_STATE oldstate;
 
-/*gsmÔÚ´¦ÀíÆäËûÃüÁî*/
     oldstate = gsmstate( GSM_STATE_GET );
     if( oldstate != GSM_TCPIP )
     {
@@ -1395,7 +1297,6 @@ void jt808_at_tx_proc( void )
             }
     }
 
-/*ÊÇ·ñÓÐÐÅÏ¢Òª·¢ËÍ*/
     ret = rt_mb_recv( &mb_at_tx, (rt_uint32_t*)&pinfo, 0 );
     if( ret != RT_EOK )
     {
@@ -1413,11 +1314,6 @@ void jt808_at_tx_proc( void )
 #endif
 }
 
-/*
-   ����״̬ά��
-   jt808Э�鴦��
-
- */
 #if 0
 static char thread_jt808_stack [4096];
 struct rt_thread thread_jt808;
@@ -1441,7 +1337,6 @@ static void rt_thread_entry_jt808( void * parameter )
 	param_put( 0x000, 4, (uint8_t*)&j );
 	printf( "\r\nid0=%08x\r\n", param_get_int( 0x0000 ) );
 
-/*��ȡ������������*/
 	//param_load( );
 
 	list_jt808_tx	= msglist_create( );
@@ -1449,7 +1344,6 @@ static void rt_thread_entry_jt808( void * parameter )
 
 	while( 1 )
 	{
-/*����gprs��Ϣ*/
 		ret = rt_mb_recv( &mb_gprsrx, ( uint32_t* )&pstr, 5 );
 		if( ret == RT_EOK )
 		{
@@ -1457,28 +1351,26 @@ static void rt_thread_entry_jt808( void * parameter )
 			free( pstr );
 		}
 
-		jt808_socket_proc( );   /*jt808 socket����*/
+		jt808_socket_proc( );
 
-		jt808_tts_proc( );      /*tts����*/
+		jt808_tts_proc( );
 
-		jt808_at_tx_proc( );    /*at�����*/
+		jt808_at_tx_proc( );
 
-/*���Ŵ���*/
 		SMS_Process( );
 
-/*������Ϣ��������*/
 		iter = list_jt808_tx->first;
 
-		if( jt808_tx_proc( iter ) == MSGLIST_RET_DELETE_NODE )  /*ɾ���ýڵ�*/
+		if( jt808_tx_proc( iter ) == MSGLIST_RET_DELETE_NODE )
 		{
 			pnodedata = ( JT808_TX_MSG_NODEDATA* )( iter->data );
 
 			printf("\r\n ɾ���ڵ�,head_id=%X",pnodedata->head_id);
 
-			free(pnodedata->user_para);						/*ɾ���û�����*/
-			free( pnodedata->pmsg );                         /*ɾ���û�����*/
-			free( pnodedata );                               /*ɾ���ڵ�����*/
-			list_jt808_tx->first = iter->next;                  /*ָ����һ��*/
+			free(pnodedata->user_para);
+			free( pnodedata->pmsg );
+			free( pnodedata );
+			list_jt808_tx->first = iter->next;
 			free( iter );
 		}
 		//rt_thread_delay( RT_TICK_PER_SECOND / 20 );
@@ -1511,7 +1403,6 @@ void jt808_init( void )
 #endif
 }
 
-/*gprs���մ���,�յ�����Ҫ���촦��*/
 uint8_t gprs_rx( uint8_t linkno, uint8_t * pinfo, uint16_t length )
 {
 #if 0
@@ -1701,14 +1592,25 @@ static uint8_t gps_jt808_tx( GPS_BASEINFO gps_baseinfo )
 	len += jt808_pack_array( buf + len, &fcs, term_param.mobile, 6 );
 	len += jt808_pack_int( buf + len, &fcs, tx_seq, 2 );
 
-	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.alarm,  4);
-	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.status,  4);
-	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.latitude,  4);
-	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.longitude,  4);
-	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.altitude,  2);
-	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.speed,  2);
-	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.direction,  2);
+	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.alarm, 4);
+	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.status, 4);
+	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.latitude, 4);
+	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.longitude, 4);
+	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.altitude, 2);
+	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.speed, 2);
+	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.direction, 2);
 	len	+= jt808_pack_array( buf + len, &fcs, gps_baseinfo.datetime, 6);
+#if DUMMY_SIMULATION
+	len	+= jt808_pack_byte( buf + len, &fcs, (uint8_t)0x01);
+	len	+= jt808_pack_byte( buf + len, &fcs, (uint8_t)0x04);
+	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.odb_odometer, 4);
+	len	+= jt808_pack_byte( buf + len, &fcs, (uint8_t)0x02);
+	len	+= jt808_pack_byte( buf + len, &fcs, (uint8_t)0x02);
+	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.fuellevel, 2);
+	len	+= jt808_pack_byte( buf + len, &fcs, (uint8_t)0x03);
+	len	+= jt808_pack_byte( buf + len, &fcs, (uint8_t)0x02);
+	len	+= jt808_pack_int( buf + len, &fcs, gps_baseinfo.odb_speed, 2);
+#endif
 	len	+= jt808_pack_byte( buf + len, &fcs, fcs );
 	buf [0]		= 0x7e;
 	buf [len]	= 0x7e;
@@ -1729,7 +1631,7 @@ static uint8_t gps_jt808_tx( GPS_BASEINFO gps_baseinfo )
 	pnodedata->pmsg		= pdata;
 	pnodedata->head_sn	= tx_seq;
 	pnodedata->head_id	= 0x0200;
-	printf("msglist_append gps request!\r\n");
+	//printf("msglist_append gps request!\r\n");
 	msglist_append( list_jt808_tx, pnodedata );
 	tx_seq++;
     return 0;
@@ -1742,7 +1644,6 @@ size_t tts_write( char* info )
 	uint16_t	count;
 	count = strlen( info );
 
-	/*ֱ�ӷ��͵�Mailbox��,�ڲ�����*/
 	pmsg = malloc( count + 2 );
 	if( pmsg != NULL )
 	{
@@ -1756,11 +1657,6 @@ size_t tts_write( char* info )
 #endif
 }
 
-/*
-   ����AT����
-   ��α�֤������,������ִ�У�����ȴ���ʱ��
-
- */
 size_t at( char *sinfo )
 {
 #if 0
@@ -1768,7 +1664,6 @@ size_t at( char *sinfo )
 	uint16_t	count;
 	count = strlen( sinfo );
 
-	/*ֱ�ӷ��͵�Mailbox��,�ڲ�����*/
 	pmsg = malloc( count + 3 );
 	if( pmsg != NULL )
 	{
@@ -1803,7 +1698,6 @@ static void main_thread_entry_jt808()
 	param_put( 0x000, 4, (uint8_t*)&j );
 	printf( "\r\nid0=%08x\r\n", param_get_int( 0x0000 ) );
 
-/*��ȡ������������*/
 	//param_load( );
 
 	while( 1 )
@@ -2115,8 +2009,17 @@ void * gps_logging_thread_entry_jt808(void * para)
 }
 
 void * gps_send_thread_entry_jt808(void * para) {
+    static float odb_odometer = 0;
+
 	while (1) {
 		printf("send gps: %d\r\n", gps_baseinfo.status);
+#if DUMMY_SIMULATION
+        gps_baseinfo.odb_speed = 30; //(int) minmea_tofloat(&frame.speed);
+        odb_odometer += gps_baseinfo.odb_speed * 1.85200 * 1000.0 ;
+        gps_baseinfo.odb_odometer = odb_odometer * 5.0 / 3600.0;
+        gps_baseinfo.fuellevel = 55000.0 - odb_odometer / 10000.0;
+        printf("speed odometer: %d %d %d\r\n", gps_baseinfo.odb_speed, gps_baseinfo.odb_odometer, gps_baseinfo.fuellevel);
+#endif
 		if (gps_baseinfo.status != 0) {
 		   gps_jt808_tx(gps_baseinfo);
 		   gps_baseinfo.status = 0;

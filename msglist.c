@@ -79,7 +79,7 @@ MsgListRet msglist_prepend(MsgList* thiz, void* data)
 
 MsgListRet msglist_append(MsgList* thiz, void* data)
 {
-	printf("msglist_append 0 lock %p\r\n", thiz->lock);
+	//printf("msglist_append 0 lock %p\r\n", thiz->lock);
 	pthread_mutex_lock(thiz->lock);
 	MsgListNode* node = RT_NULL;
 	MsgListNode* iter=RT_NULL;
@@ -107,7 +107,7 @@ MsgListRet msglist_append(MsgList* thiz, void* data)
 	iter->next=node;
 	node->prev=iter;
 	pthread_mutex_unlock(thiz->lock);
-	printf("msglist_append unlock %p\r\n", thiz->lock);
+	//printf("msglist_append unlock %p\r\n", thiz->lock);
 	return MSGLIST_RET_OK;
 }
 
