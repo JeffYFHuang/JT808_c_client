@@ -1566,6 +1566,7 @@ static uint8_t auth_jt808_tx( void )
 
 static uint8_t gps_jt808_tx( GPS_BASEINFO gps_baseinfo )
 {
+	printf("%s\r\n", __func__);
 	uint8_t					* pdata;
 	JT808_TX_MSG_NODEDATA	* pnodedata;
 	uint8_t					buf[256];
@@ -2008,18 +2009,34 @@ void * gps_logging_thread_entry_jt808(void * para)
 	return 0;
 }
 
+#if DUMMY_SIMULATION
+#define CAR_AVG_SPEED  30               // knots/hr
+#define RESET_ODOMETER 2000             // 2000 kms
+#define CAR_FUEL_FULL  55000.0           // ml
+#define CAR_AVG_FUEL_CONSUMPTION 10000.0 // meters/l
+
+void car_simulation () {
+    static float fuellevel = CAR_FUEL_FULL;
+
+	gps_baseinfo.odb_speed = gps_baseinfo.speed;//CAR_AVG_SPEED + (rand()%10) - (rand()%10); //(int) minmea_tofloat(&frame.speed);
+	float distance = gps_baseinfo.odb_speed * 1.85200 * 1000.0 * 5; //5 secs distance
+	gps_baseinfo.odb_odometer += distance / 3600.0;
+	fuellevel -= distance / CAR_AVG_FUEL_CONSUMPTION;
+	if (fuellevel <= 0)
+		fuellevel = CAR_FUEL_FULL;
+    gps_baseinfo.fuellevel = fuellevel;
+	printf("speed odometer: %d %d %d\r\n", gps_baseinfo.odb_speed, gps_baseinfo.odb_odometer, gps_baseinfo.fuellevel);
+}
+#endif
+
 void * gps_send_thread_entry_jt808(void * para) {
-    static float odb_odometer = 0;
+#if DUMMY_SIMULATION
+    gps_baseinfo.fuellevel = CAR_FUEL_FULL;
+#endif
 
 	while (1) {
 		printf("send gps: %d\r\n", gps_baseinfo.status);
-#if DUMMY_SIMULATION
-        gps_baseinfo.odb_speed = 30; //(int) minmea_tofloat(&frame.speed);
-        odb_odometer += gps_baseinfo.odb_speed * 1.85200 * 1000.0 ;
-        gps_baseinfo.odb_odometer = odb_odometer * 5.0 / 3600.0;
-        gps_baseinfo.fuellevel = 55000.0 - odb_odometer / 10000.0;
-        printf("speed odometer: %d %d %d\r\n", gps_baseinfo.odb_speed, gps_baseinfo.odb_odometer, gps_baseinfo.fuellevel);
-#endif
+		car_simulation ();
 		if (gps_baseinfo.status != 0) {
 		   gps_jt808_tx(gps_baseinfo);
 		   gps_baseinfo.status = 0;
